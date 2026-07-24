@@ -53,8 +53,13 @@ async def watch_log() -> None:
         if ev is None:
             continue
 
-        if ev.kind == EventKind.DEATH and not config.features.deaths:
-            continue
+        if ev.kind == EventKind.DEATH:
+            if not config.features.deaths:
+                continue
+            if not sessions.is_online(ev.player):
+                # не реальный игрок: диагностический дамп / ответ консольной команды и т.п.
+                log.info("DEATH-строка отклонена (не онлайн-игрок): %s", ev.text)
+                continue
         if ev.kind == EventKind.ADVANCEMENT and not config.features.advancements:
             continue
         if ev.kind in (EventKind.SERVER_START, EventKind.SERVER_STOP) and not config.features.server_events:
@@ -79,6 +84,12 @@ async def watch_log() -> None:
 async def main() -> None:
     dp = Dispatcher()
     dp.include_router(router)
+    try:
+        _, _, names = await get_online(config.mc_host, config.mc_port)
+        sessions.seed_online(names)
+        log.info("Онлайн при старте: %s", names or "—")
+    except Exception as e:
+        log.warning("Не удалось получить список онлайн при старте: %s", e)
     log.info("minebot запущен; лог: %s; чат: %s", config.log_path, CHAT_ID)
     await asyncio.gather(watch_log(), dp.start_polling(bot))
 

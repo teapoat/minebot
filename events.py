@@ -13,6 +13,13 @@ from enum import Enum, auto
 
 LOG_LINE_RE = re.compile(r"^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[[^/]+/(?P<level>[A-Z]+)\]: (?P<msg>.*)$")
 
+# ВНИМАНИЕ: на offline-mode серверах ники НЕ ограничены форматом Mojang (бывают 2-символьные,
+# спецсимволы § ° ´ и т.п.) — валидация по алфавиту ника здесь НЕДОПУСТИМА. Защита от "не-игровых"
+# строк вроде диагностического дампа смерти именованной сущности или ответа консольной команды
+# ("No entity was found", тоже содержит "was") — на уровне bot.py: DEATH считается реальным,
+# только если ev.player сейчас входит в множество известных подключённых игроков
+# (SessionTracker.is_online).
+
 JOIN_RE = re.compile(r"^(?P<player>\S+) joined the game$")
 LEAVE_RE = re.compile(r"^(?P<player>\S+) left the game$")
 ADVANCEMENT_RE = re.compile(
@@ -58,6 +65,10 @@ def parse_line(raw_line: str) -> Event | None:
 
     if msg.startswith("<"):
         return None  # чат игрока, не событие
+
+    if msg.startswith("Named entity "):
+        return None  # диагностический дамп смерти именованной сущности — строка содержит
+        # uuid/координаты/died/was и легко ловится грепом как "смерть игрока", если не отсечь явно
 
     if m2 := JOIN_RE.match(msg):
         player = m2.group("player")
