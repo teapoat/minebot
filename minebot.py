@@ -91,7 +91,16 @@ async def main() -> None:
     except Exception as e:
         log.warning("Не удалось получить список онлайн при старте: %s", e)
     log.info("minebot запущен; лог: %s; чат: %s", config.log_path, CHAT_ID)
-    await asyncio.gather(watch_log(), dp.start_polling(bot))
+
+    if config.features.online_command:
+        await asyncio.gather(watch_log(), dp.start_polling(bot))
+    else:
+        # Polling (getUpdates) не запускаем: Telegram разрешает только одного слушателя на
+        # токен — если рядом уже работает другой инстанс бота (тоже polling), запуск второго
+        # ловит TelegramConflictError. Событие в чат уходит через send_message, этому конфликту
+        # не подвержено.
+        log.info("online_command выключен — polling не запускается")
+        await watch_log()
 
 
 if __name__ == "__main__":
