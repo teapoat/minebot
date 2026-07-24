@@ -1,0 +1,19 @@
+# systemd-юнит бота. Деплой: см.  .
+
+[Unit]
+Description=minebot (minebot.py, aiogram 3)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/scripts/minebot
+ExecStart=/home/ubuntu/scripts/minebot/venv/bin/python minebot.py
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=5
+TimeoutStopSec=10
+User=ubuntu
+Group=ubuntu
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

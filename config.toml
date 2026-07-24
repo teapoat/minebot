@@ -1,0 +1,19 @@
+# Конфиг minebot. Правь любым редактором, затем: sudo systemctl restart minebot
+
+[server]
+log_path = "/data/minecraft/logs/latest.log"
+mc_host = "127.0.0.1"
+mc_port = 42681
+
+[features]
+deaths = true
+advancements = true
+joins = true
+server_events = false
+online_command = true
+
+[joins]
+cooldown_min = 10
+
+[paths]
+sessions_csv = "sessions.csv"
