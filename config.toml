@@ -1,4 +1,4 @@
-# Конфиг minebot. Правь любым редактором, затем: sudo systemctl restart minebot
+# minebot config. Edit with any editor, then: sudo systemctl restart minebot
 
 [server]
 log_path = "/data/minecraft/logs/latest.log"

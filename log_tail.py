@@ -1,8 +1,9 @@
-"""Асинхронный tail-follow logs/latest.log с обработкой ротации.
+"""Async tail-follow of logs/latest.log with rotation handling.
 
-Paper переименовывает/пересоздаёт latest.log при рестарте сервера (новый inode на диске) —
-отслеживаем (st_dev, st_ino) и переоткрываем файл с начала при расхождении. При старте
-встаём в КОНЕЦ текущего файла — события, случившиеся пока бот не работал, не досылаются.
+Paper renames/recreates latest.log on server restart (new inode on disk) — we track
+(st_dev, st_ino) and reopen the file from the start when it changes. On startup we seek
+to the END of the current file — events that happened while the bot wasn't running are
+not backfilled.
 """
 
 import asyncio
@@ -29,7 +30,7 @@ async def tail_lines(path: Path, poll_interval: float = 0.5) -> AsyncIterator[st
                 if line.endswith("\n"):
                     yield line
                     continue
-                # неполная строка (файл дописывается) — подождать и перечитать с той же позиции
+                # partial line (file still being written) — wait and re-read from the same position
                 f.seek(f.tell() - len(line))
                 await asyncio.sleep(poll_interval)
                 continue

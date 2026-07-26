@@ -1,10 +1,11 @@
-"""Парсинг событий из строк лога Paper.
+"""Parses events out of Paper server log lines.
 
-Ключевые слова смертей сверены с официальной minecraft.wiki/w/Death_messages — в т.ч. пробел
-"left the confines of this world" (мировой барьер), который легко упустить, ориентируясь на
-устаревшие списки. Грамматика смертей в Java стабильна с 1.9 ("X was <глагол> by Y" для деталей
-от сущности) — широкий `was` ловит новых мобов (mace smash, warden) без перечисления каждого.
-Ачивки — 3 ключа локализации, стабильны с 1.12.
+Death keywords are cross-checked against the official minecraft.wiki/w/Death_messages,
+including "left the confines of this world" (world border), which is easy to miss when
+relying on outdated lists. Java death message grammar has been stable since 1.9 ("X was
+<verb> by Y" for entity-caused deaths) — matching the broad `was` catches new mobs (mace
+smash, warden) without enumerating each one. Advancements use 3 localization keys, stable
+since 1.12.
 """
 
 import re
@@ -13,12 +14,12 @@ from enum import Enum, auto
 
 LOG_LINE_RE = re.compile(r"^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[[^/]+/(?P<level>[A-Z]+)\]: (?P<msg>.*)$")
 
-# ВНИМАНИЕ: на offline-mode серверах ники НЕ ограничены форматом Mojang (бывают 2-символьные,
-# спецсимволы § ° ´ и т.п.) — валидация по алфавиту ника здесь НЕДОПУСТИМА. Защита от "не-игровых"
-# строк вроде диагностического дампа смерти именованной сущности или ответа консольной команды
-# ("No entity was found", тоже содержит "was") — на уровне bot.py: DEATH считается реальным,
-# только если ev.player сейчас входит в множество известных подключённых игроков
-# (SessionTracker.is_online).
+# WARNING: on offline-mode servers, nicknames are NOT restricted to the Mojang format (2-char
+# names, special characters like § ° ´, etc.) — validating against a nickname alphabet here is
+# NOT acceptable. Filtering out "non-gameplay" lines such as a named entity's diagnostic death
+# dump or a console command response ("No entity was found", which also contains "was") happens
+# in bot.py instead: a DEATH is only considered real if ev.player is currently in the set of
+# known connected players (SessionTracker.is_online).
 
 JOIN_RE = re.compile(r"^(?P<player>\S+) joined the game$")
 LEAVE_RE = re.compile(r"^(?P<player>\S+) left the game$")
@@ -29,7 +30,7 @@ ADVANCEMENT_RE = re.compile(
 SERVER_DONE_RE = re.compile(r"^Done \([\d.]+s\)! For help, type \"help\"$")
 SERVER_STOPPING_RE = re.compile(r"^Stopping the server$")
 
-# Ключевые слова смертей — при совпадении строка считается смертью, ник = первое слово строки.
+# Death keywords — a matching line is treated as a death, the nickname is the line's first word.
 DEATH_KEYWORDS = (
     "died", "was", "walked into", "drowned", "experienced kinetic energy", "blew up",
     "hit the ground", "fell", "went", "burned to death", "was burnt", "tried to swim",
@@ -50,9 +51,9 @@ class EventKind(Enum):
 @dataclass(frozen=True)
 class Event:
     kind: EventKind
-    time_str: str  # "HH:MM:SS" из лога (UTC)
+    time_str: str  # "HH:MM:SS" from the log (UTC)
     player: str | None
-    text: str  # готовый для показа текст (без эмодзи, эмодзи добавляет formatting.py)
+    text: str  # display-ready text (no emoji — formatting.py adds those)
 
 
 def parse_line(raw_line: str) -> Event | None:
@@ -64,11 +65,11 @@ def parse_line(raw_line: str) -> Event | None:
     msg = m.group("msg")
 
     if msg.startswith("<"):
-        return None  # чат игрока, не событие
+        return None  # player chat, not an event
 
     if msg.startswith("Named entity "):
-        return None  # диагностический дамп смерти именованной сущности — строка содержит
-        # uuid/координаты/died/was и легко ловится грепом как "смерть игрока", если не отсечь явно
+        return None  # named entity's diagnostic death dump — contains uuid/coordinates/died/was
+        # and is easily mistaken for a "player death" by naive matching if not filtered explicitly
 
     if m2 := JOIN_RE.match(msg):
         player = m2.group("player")

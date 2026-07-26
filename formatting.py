@@ -1,7 +1,7 @@
-"""Текст ТГ-сообщения из события — эмодзи + время в фиксированном поясе.
+"""Turns an event into Telegram message text — emoji + time in a fixed timezone.
 
-Единый пояс для входов/выходов — GMT+6, фиксированное смещение без перехода на летнее время
-(сервер сам пишет лог в UTC).
+A single fixed timezone is used for joins/leaves — GMT+6, a fixed offset with no DST
+(the server itself logs in UTC).
 """
 
 from datetime import datetime, timedelta, timezone

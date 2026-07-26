@@ -1,18 +1,18 @@
-"""Кулдаун входов/выходов (анти-дребезг) + журнал sessions.csv.
+"""Join/leave cooldown (anti-flapping) + the sessions.csv log.
 
-Кулдаун — скользящее окно per-игрок: первый вход и следующий за ним выход в сессии
-показываются в чат; если игрок переподключается быстрее cooldown_min после выхода — считаем
-это дребезгом (плохая сеть) и глушим и повторный вход, и следующий за ним выход, пока не
-пройдёт пауза длиннее cooldown_min. sessions.csv пишет ВСЕ входы/выходы без исключений (сырые
-данные — задел под будущую статистику), глушение касается только сообщений в чат.
+Cooldown is a per-player sliding window: the first join and the leave that follows it in a
+session are shown in the chat; if a player reconnects faster than cooldown_min after leaving,
+we treat it as flapping (bad network) and suppress both the repeat join and the leave that
+follows it, until a gap longer than cooldown_min passes. sessions.csv logs ALL joins/leaves
+without exception (raw data kept for future stats) — suppression only affects chat messages.
 
-Дополнительно хранит множество СЕЙЧАС подключённых игроков (`is_online`) — используется, чтобы
-отсеивать "смерти", субъект которых не реальный онлайн-игрок: сервер (Paper) время от времени
-пишет диагностическую строку вида "Named entity X[...] died: ..." для именованных мобов/питомцев,
-а консоль может ответить "No entity was found" на неудачную команду — обе содержат слово "was" и
-без этой проверки уходили бы в чат как настоящая смерть игрока. Ники на нелицензионных
-(offline-mode) серверах не ограничены форматом Mojang — валидация по алфавиту ника недопустима,
-только по факту "сейчас в игре".
+Also tracks the set of CURRENTLY connected players (`is_online`) — used to filter out
+"deaths" whose subject isn't a real online player: the server (Paper) occasionally logs a
+diagnostic line like "Named entity X[...] died: ..." for named mobs/pets, and the console
+can respond with "No entity was found" to a failed command — both contain the word "was" and
+without this check would be sent to the chat as a real player death. Nicknames on unlicensed
+(offline-mode) servers aren't restricted to the Mojang format — validating against a nickname
+alphabet isn't acceptable, only checking whether the player is currently in the game is.
 """
 
 import csv
@@ -39,7 +39,7 @@ class SessionTracker:
             self._csv_path.write_text("time,player,event\n", encoding="utf-8")
 
     def seed_online(self, players: list[str]) -> None:
-        """Заполнить список подключённых при старте бота (сервер мог работать и до него)."""
+        """Seeds the connected-player set at bot startup (the server may have been running before it)."""
         self._online.update(players)
 
     def is_online(self, player: str) -> bool:
@@ -50,7 +50,7 @@ class SessionTracker:
             csv.writer(f).writerow([now.strftime("%Y-%m-%d %H:%M:%S"), player, event])
 
     def on_join(self, player: str) -> bool:
-        """Возвращает True, если вход нужно показать в чат."""
+        """Returns True if the join should be shown in the chat."""
         now = datetime.now(GMT_PLUS_6)
         self._log_csv(now, player, "join")
         self._online.add(player)
@@ -62,7 +62,7 @@ class SessionTracker:
         return True
 
     def on_leave(self, player: str) -> bool:
-        """Возвращает True, если выход нужно показать в чат."""
+        """Returns True if the leave should be shown in the chat."""
         now = datetime.now(GMT_PLUS_6)
         self._log_csv(now, player, "leave")
         self._online.discard(player)

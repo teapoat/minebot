@@ -1,4 +1,4 @@
-"""Загрузка config.toml — вкл/выкл фич и пути, без правки кода."""
+"""Loads config.toml — feature toggles and paths, no code edits needed."""
 
 import tomllib
 from dataclasses import dataclass

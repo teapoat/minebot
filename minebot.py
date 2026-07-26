@@ -1,4 +1,4 @@
-"""minebot — трансляция событий Minecraft (смерти/ачивки/входы) в Telegram."""
+"""minebot — relays Minecraft events (deaths/advancements/joins) to Telegram."""
 
 import asyncio
 import logging
@@ -57,8 +57,8 @@ async def watch_log() -> None:
             if not config.features.deaths:
                 continue
             if not sessions.is_online(ev.player):
-                # не реальный игрок: диагностический дамп / ответ консольной команды и т.п.
-                log.info("DEATH-строка отклонена (не онлайн-игрок): %s", ev.text)
+                # not a real player: diagnostic dump / console command response / etc.
+                log.info("DEATH line rejected (not an online player): %s", ev.text)
                 continue
         if ev.kind == EventKind.ADVANCEMENT and not config.features.advancements:
             continue
@@ -66,7 +66,7 @@ async def watch_log() -> None:
             continue
 
         if ev.kind == EventKind.JOIN:
-            shown = sessions.on_join(ev.player)  # sessions.csv пишет всегда, вне зависимости от фичи
+            shown = sessions.on_join(ev.player)  # sessions.csv is always written, regardless of the feature flag
             if not config.features.joins or not shown:
                 continue
         elif ev.kind == EventKind.LEAVE:
@@ -87,19 +87,19 @@ async def main() -> None:
     try:
         _, _, names = await get_online(config.mc_host, config.mc_port)
         sessions.seed_online(names)
-        log.info("Онлайн при старте: %s", names or "—")
+        log.info("Online at startup: %s", names or "—")
     except Exception as e:
-        log.warning("Не удалось получить список онлайн при старте: %s", e)
-    log.info("minebot запущен; лог: %s; чат: %s", config.log_path, CHAT_ID)
+        log.warning("Failed to fetch the online player list at startup: %s", e)
+    log.info("minebot started; log: %s; chat: %s", config.log_path, CHAT_ID)
 
     if config.features.online_command:
         await asyncio.gather(watch_log(), dp.start_polling(bot))
     else:
-        # Polling (getUpdates) не запускаем: Telegram разрешает только одного слушателя на
-        # токен — если рядом уже работает другой инстанс бота (тоже polling), запуск второго
-        # ловит TelegramConflictError. Событие в чат уходит через send_message, этому конфликту
-        # не подвержено.
-        log.info("online_command выключен — polling не запускается")
+        # Not starting polling (getUpdates): Telegram allows only one listener per token —
+        # if another bot instance (also polling) is already running, starting a second one
+        # hits TelegramConflictError. Events reach the chat via send_message, which is not
+        # subject to this conflict.
+        log.info("online_command is disabled — polling not started")
         await watch_log()
 
 

@@ -1,4 +1,4 @@
-# systemd-юнит бота. Деплой: см.  .
+# systemd unit for the bot. See README.md for deployment steps.
 
 [Unit]
 Description=minebot (minebot.py, aiogram 3)
