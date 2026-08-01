@@ -1,36 +1,62 @@
 # minebot
 
-Телеграм-бот, который транслирует события Minecraft-сервера (смерти, достижения, входы/выходы игроков) в чат Telegram — читает лог сервера в реальном времени и красиво форматирует события.
+A Telegram bot that relays Minecraft server events (deaths, achievements, joins/leaves)
+into a Telegram chat — reads the server log in real time and formats events nicely.
 
-Построен в паре с [Claude Code](https://claude.com/claude-code) — от разбора legacy-кода и архитектурных решений до живой отладки на боевом сервере.
+Built together with [Claude Code](https://claude.com/claude-code) — from reading the
+legacy code and making architecture decisions to live debugging on a production server.
 
-## Возможности
+## What it does
 
-- 💀 Смерти игроков, 🏆 достижения, 🟢🔴 входы/выходы (с анти-дребезгом при нестабильной сети)
-- `/online` — кто сейчас на сервере (прямой запрос к серверу, без опроса лога)
-- Все функции включаются/выключаются в `config.toml`, без перезаписи кода
-- Устойчив к ротации лог-файла и перезапускам сервера
+- 💀 Player deaths, 🏆 achievements, 🟢🔴 joins/leaves (with anti-flap on flaky connections)
+- `/online` — who is on the server right now (a direct server query, not log polling)
+- Every feature can be turned on/off in `config.toml`, no code changes needed
+- Survives log file rotation and server restarts
 
-## Стек
+## Requirements
 
-Python 3.12+, [aiogram 3](https://docs.aiogram.dev/), [mcstatus](https://github.com/py-mine/mcstatus), asyncio.
+- **Python 3.12 or newer.**
+- A Minecraft **Paper** (or compatible) server you can read `logs/latest.log` from —
+  local access or a shared volume/mount. The bot does not connect to the server console,
+  only tails the log file and queries the server status port.
+- No GPU, no extra system packages beyond Python — all dependencies are pure-Python
+  (see `requirements.txt`: aiogram, python-dotenv, mcstatus).
 
-## Запуск
+## Setup
 
 ```bash
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
-cp .env.example .env   # заполнить BOT_TOKEN и CHAT_ID
+cp .env.example .env   # fill in BOT_TOKEN and CHAT_ID
+```
+
+Edit `config.toml`: set `server.log_path` to your server's `logs/latest.log` and
+`server.mc_host`/`server.mc_port` to where the server's status port is reachable.
+
+## Run
+
+```bash
 venv/bin/python minebot.py
 ```
 
-Пример юнита для автозапуска — `deploy/minebot.service`.
+## Deploy
 
-## Устройство
+See `deploy/minebot.service` for a systemd unit template. Edit the paths
+(`WorkingDirectory`, `ExecStart`, `User`/`Group`) to match where you installed it.
 
-- `minebot.py` — точка входа, aiogram-роутер команд
-- `log_tail.py` — асинхронное чтение лога с обработкой ротации
-- `events.py` — разбор строк лога в события
-- `sessions.py` — анти-дребезг входов/выходов + учёт того, кто реально сейчас в игре
-- `formatting.py` — оформление сообщений
-- `mc_query.py` — запрос статуса сервера для `/online`
+## Tests
+
+```bash
+venv/bin/pip install -r requirements-dev.txt
+venv/bin/pytest
+venv/bin/ruff check .
+```
+
+## How it's built
+
+- `minebot.py` — entry point, aiogram router for commands
+- `log_tail.py` — async log reading that survives file rotation
+- `events.py` — parses log lines into events
+- `sessions.py` — anti-flap for joins/leaves, plus tracking who is actually online
+- `formatting.py` — message formatting
+- `mc_query.py` — server status query for `/online`
