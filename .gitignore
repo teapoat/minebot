@@ -22,3 +22,9 @@ sessions.csv
 .vscode/
 .idea/
 .DS_Store
+
+# Permissions of THIS machine only. It does not travel between machines, and keeping it
+# in shared history would falsely suggest that permissions are synchronized. Until
+# 2026-08-25 this was covered only by a machine-local ~/.config/git/ignore, which is not
+# in git and does not reach any other machine.
+.claude/settings.local.json
