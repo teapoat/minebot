@@ -3,6 +3,9 @@
 *.env
 !.env.example
 
+# Real config of a deployed bot (copy from config.example.toml)
+config.toml
+
 # Python
 __pycache__/
 *.py[cod]

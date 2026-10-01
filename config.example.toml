@@ -1,4 +1,4 @@
-# minebot config. Edit with any editor, then: sudo systemctl restart minebot
+# minebot config template. Copy to config.toml and edit, then: sudo systemctl restart minebot
 
 [server]
 log_path = "/path/to/server/logs/latest.log"

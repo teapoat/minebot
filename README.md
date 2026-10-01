@@ -16,7 +16,7 @@ legacy code and making architecture decisions to live debugging on a production 
 ## Requirements
 
 - **Python 3.12 or newer.**
-- A Minecraft **Paper** (or compatible) server you can read `logs/latest.log` from —
+- A Minecraft **Paper** or **NeoForge** (or compatible) server you can read `logs/latest.log` from —
   local access or a shared volume/mount. The bot does not connect to the server console,
   only tails the log file and queries the server status port.
 - No GPU, no extra system packages beyond Python — all dependencies are pure-Python
@@ -27,9 +27,11 @@ legacy code and making architecture decisions to live debugging on a production 
 ```bash
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
-cp .env.example .env   # fill in BOT_TOKEN and CHAT_ID
+cp .env.example .env               # fill in BOT_TOKEN and CHAT_ID
+cp config.example.toml config.toml
 ```
 
+`.env` and `config.toml` are not tracked by git, so `git pull` never touches them.
 Edit `config.toml`: set `server.log_path` to your server's `logs/latest.log` and
 `server.mc_host`/`server.mc_port` to where the server's status port is reachable.
 
