@@ -35,7 +35,11 @@ router = Router()
 
 @router.message(Command("online"))
 async def cmd_online(message: Message) -> None:
-    if message.chat.id != CHAT_ID or not config.features.online_command:
+    if message.chat.id != CHAT_ID:
+        # logged so a wrong CHAT_ID in .env is easy to spot (and the right one to copy)
+        log.info("/online ignored: chat id %s is not CHAT_ID %s", message.chat.id, CHAT_ID)
+        return
+    if not config.features.online_command:
         return
     try:
         online, max_players, names = await get_online(config.mc_host, config.mc_port)
