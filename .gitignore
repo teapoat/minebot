@@ -13,6 +13,9 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# Local drop folder for server logs and other raw files (may hold player names, secrets)
+inbox/
+
 # Bot runtime state (history of sent lines, etc.)
 historylines.txt
 *.log

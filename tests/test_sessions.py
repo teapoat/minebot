@@ -66,6 +66,17 @@ def test_leave_marks_player_offline(csv_path, clock):
     assert tracker.is_online("Steve") is False
 
 
+def test_left_recently_covers_death_logged_right_after_leave(csv_path, clock):
+    tracker = SessionTracker(cooldown_min=10, csv_path=csv_path)
+    assert tracker.left_recently("Steve") is False
+    tracker.on_join("Steve")
+    assert tracker.left_recently("Steve") is False
+    tracker.on_leave("Steve")
+    assert tracker.left_recently("Steve") is True
+    clock.advance(seconds=6)
+    assert tracker.left_recently("Steve") is False
+
+
 def test_normal_leave_is_shown(csv_path, clock):
     tracker = SessionTracker(cooldown_min=10, csv_path=csv_path)
     tracker.on_join("Steve")

@@ -1,4 +1,11 @@
-"""Parses events out of Paper server log lines.
+"""Parses events out of Minecraft server log lines (Paper and NeoForge formats).
+
+Paper:    [14:23:05] [Server thread/INFO]: Player1 was slain by Zombie
+NeoForge: [01Oct2026 14:23:05.348] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Player1 was slain by Zombie
+
+On NeoForge, mods write a lot to the same log (including raw stdout), so only lines from the
+vanilla server loggers are parsed — a mod printing "X was ..." can't become a fake death.
+The event texts themselves are vanilla on both (checked on a large NeoForge modpack).
 
 Death keywords are cross-checked against the official minecraft.wiki/w/Death_messages,
 including "left the confines of this world" (world border), which is easy to miss when
@@ -12,7 +19,16 @@ import re
 from dataclasses import dataclass
 from enum import Enum, auto
 
-LOG_LINE_RE = re.compile(r"^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[[^/]+/(?P<level>[A-Z]+)\]: (?P<msg>.*)$")
+LOG_LINE_RE = re.compile(
+    r"^\[(?:\d{2}[A-Za-z]{3}\d{4} )?(?P<time>\d{2}:\d{2}:\d{2})(?:\.\d+)?\] "
+    r"\[[^/\]]+/(?P<level>[A-Z]+)\](?: \[(?P<logger>[^\]]*)\])?: (?P<msg>.*)$"
+)
+
+# NeoForge only: loggers that carry game events (deaths/advancements/joins, server start/stop).
+GAME_LOGGERS = (
+    "net.minecraft.server.MinecraftServer/",
+    "net.minecraft.server.dedicated.DedicatedServer/",
+)
 
 # WARNING: on offline-mode servers, nicknames are NOT restricted to the Mojang format (2-char
 # names, special characters like § ° ´, etc.) — validating against a nickname alphabet here is
@@ -59,6 +75,9 @@ class Event:
 def parse_line(raw_line: str) -> Event | None:
     m = LOG_LINE_RE.match(raw_line.rstrip("\n"))
     if not m or m.group("level") != "INFO":
+        return None
+    logger = m.group("logger")
+    if logger is not None and logger not in GAME_LOGGERS:
         return None
 
     time_str = m.group("time")

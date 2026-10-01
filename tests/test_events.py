@@ -138,3 +138,53 @@ def test_line_without_trailing_newline():
 def test_thread_name_with_spaces_and_hash():
     ev = parse_line(_line("Steve joined the game", thread="User Authenticator #1"))
     assert ev.kind == EventKind.JOIN
+
+
+# --- NeoForge log format ---
+
+def _nf(msg: str, logger: str = "net.minecraft.server.MinecraftServer/", level: str = "INFO") -> str:
+    return f"[01Oct2026 14:23:05.348] [Server thread/{level}] [{logger}]: {msg}\n"
+
+
+def test_neoforge_death():
+    ev = parse_line(_nf("Steve was shot by Mutant Skeleton"))
+    assert ev.kind == EventKind.DEATH
+    assert ev.player == "Steve"
+    assert ev.time_str == "14:23:05"
+    assert ev.text == "Steve was shot by Mutant Skeleton"
+
+
+def test_neoforge_fell_out_of_the_world():
+    ev = parse_line(_nf("Steve fell out of the world"))
+    assert ev.kind == EventKind.DEATH
+
+
+def test_neoforge_join_and_leave():
+    assert parse_line(_nf("Steve joined the game")).kind == EventKind.JOIN
+    assert parse_line(_nf("Steve left the game")).kind == EventKind.LEAVE
+
+
+def test_neoforge_advancement_with_quote_in_name():
+    ev = parse_line(_nf("Steve has made the advancement ['X' Marks the Spot]"))
+    assert ev.kind == EventKind.ADVANCEMENT
+    assert ev.player == "Steve"
+
+
+def test_neoforge_server_start_from_dedicated_server_logger():
+    ev = parse_line(_nf('Done (7.148s)! For help, type "help"', logger="net.minecraft.server.dedicated.DedicatedServer/"))
+    assert ev.kind == EventKind.SERVER_START
+
+
+def test_neoforge_mod_logger_is_ignored():
+    # mods print to stdout via LoggedPrintStream — must never be parsed as a death
+    assert parse_line(_nf("Steve was here", logger="net.minecraft.server.LoggedPrintStream/")) is None
+    assert parse_line(_nf("Steve joined the game", logger="journeymap/")) is None
+
+
+def test_neoforge_logger_with_marker_and_spaces():
+    assert parse_line(_nf("Steve fell", logger="net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN")) is None
+    assert parse_line(_nf("Steve fell", logger="Puzzles Lib/")) is None
+
+
+def test_neoforge_rcon_echo_is_not_an_event():
+    assert parse_line(_nf("[Rcon: Saved the game]")) is None

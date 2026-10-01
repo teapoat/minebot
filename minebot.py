@@ -56,7 +56,7 @@ async def watch_log() -> None:
         if ev.kind == EventKind.DEATH:
             if not config.features.deaths:
                 continue
-            if not sessions.is_online(ev.player):
+            if not (sessions.is_online(ev.player) or sessions.left_recently(ev.player)):
                 # not a real player: diagnostic dump / console command response / etc.
                 log.info("DEATH line rejected (not an online player): %s", ev.text)
                 continue

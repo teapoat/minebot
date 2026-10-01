@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 GMT_PLUS_6 = timezone(timedelta(hours=6))
+LEAVE_GRACE = timedelta(seconds=5)
 
 
 @dataclass
@@ -44,6 +45,12 @@ class SessionTracker:
 
     def is_online(self, player: str) -> bool:
         return player in self._online
+
+    def left_recently(self, player: str) -> bool:
+        """True if the player left within LEAVE_GRACE. Some modded servers kill a player who
+        disconnects mid-fight, and the death line is logged a few ms AFTER "left the game"."""
+        st = self._state.get(player)
+        return st is not None and st.last_leave is not None and datetime.now(GMT_PLUS_6) - st.last_leave <= LEAVE_GRACE
 
     def _log_csv(self, now: datetime, player: str, event: str) -> None:
         with self._csv_path.open("a", encoding="utf-8", newline="") as f:
