@@ -1,9 +1,9 @@
 # minebot config. Edit with any editor, then: sudo systemctl restart minebot
 
 [server]
-log_path = "/data/minecraft/logs/latest.log"
+log_path = "/path/to/server/logs/latest.log"
 mc_host = "127.0.0.1"
-mc_port = 42681
+mc_port = 25565
 
 [features]
 deaths = true
