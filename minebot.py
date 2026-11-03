@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from config import load_config
 from events import EventKind, parse_line
 from formatting import format_event
+from lifecycle import run_until_stopped
 from log_tail import tail_lines
 from mc_query import get_online
 from sessions import SessionTracker
@@ -85,26 +86,45 @@ async def watch_log() -> None:
             log.warning("send_message failed: %s", e)
 
 
+async def poll_updates(dp: Dispatcher) -> None:
+    polling = asyncio.create_task(
+        dp.start_polling(bot, handle_signals=False, close_bot_session=False)
+    )
+    try:
+        # Cancelling start_polling directly can leave its internal request task alive.
+        await asyncio.shield(polling)
+    finally:
+        if not polling.done():
+            try:
+                await dp.stop_polling()
+            except RuntimeError:
+                # The task may have been cancelled before polling acquired its lock.
+                polling.cancel()
+        await asyncio.gather(polling, return_exceptions=True)
+
+
 async def main() -> None:
     dp = Dispatcher()
     dp.include_router(router)
     try:
-        _, _, names = await get_online(config.mc_host, config.mc_port)
-        sessions.seed_online(names)
-        log.info("Online at startup: %s", names or "—")
-    except Exception as e:
-        log.warning("Failed to fetch the online player list at startup: %s", e)
-    log.info("minebot started; log: %s; chat: %s", config.log_path, CHAT_ID)
+        try:
+            _, _, names = await get_online(config.mc_host, config.mc_port)
+            sessions.seed_online(names)
+            log.info("Online at startup: %s", names or "—")
+        except Exception as e:
+            log.warning("Failed to fetch the online player list at startup: %s", e)
+        log.info("minebot started; log: %s; chat: %s", config.log_path, CHAT_ID)
 
-    if config.features.online_command:
-        await asyncio.gather(watch_log(), dp.start_polling(bot))
-    else:
-        # Not starting polling (getUpdates): Telegram allows only one listener per token —
-        # if another bot instance (also polling) is already running, starting a second one
-        # hits TelegramConflictError. Events reach the chat via send_message, which is not
-        # subject to this conflict.
-        log.info("online_command is disabled — polling not started")
-        await watch_log()
+        if config.features.online_command:
+            # One signal owner stops both polling and log following.
+            await run_until_stopped(watch_log(), poll_updates(dp))
+        else:
+            # Telegram permits one getUpdates listener per token; sending log events
+            # still works when polling is disabled.
+            log.info("online_command is disabled — polling not started")
+            await run_until_stopped(watch_log())
+    finally:
+        await bot.session.close()
 
 
 if __name__ == "__main__":
